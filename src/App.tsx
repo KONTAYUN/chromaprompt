@@ -51,11 +51,19 @@ export default function App() {
 
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  // Analyses are kept per image for this page session only; a refresh clears them.
+  const [results, setResults] = useState<Record<string, AnalysisResult>>({});
+  const [promptEdits, setPromptEdits] = useState<Record<string, Record<string, string>>>({});
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fileDragging, setFileDragging] = useState(false);
-  const elapsedSeconds = useElapsedSeconds(isAnalyzing);
+
+  const activeImage = images.find((image) => image.id === activeImageId) ?? images[0] ?? null;
+  const activeId = activeImage?.id ?? "";
+  const result = activeImage ? (results[activeImage.id] ?? null) : null;
+  const isAnalyzing = analyzingId !== null && analyzingId === activeImage?.id;
+  const busyElsewhere = analyzingId !== null && !isAnalyzing;
+  const elapsedSeconds = useElapsedSeconds(analyzingId !== null);
 
   const [targetSubject, setTargetSubject] = useState('');
   const [stylePreference, setStylePreference] = useState('');
@@ -73,16 +81,21 @@ export default function App() {
   // Async handlers read the latest state through refs instead of stale closures.
   const imagesRef = useRef(images);
   imagesRef.current = images;
-  const resultRef = useRef(result);
-  resultRef.current = result;
+  const resultsRef = useRef(results);
+  resultsRef.current = results;
+  const activeIdRef = useRef(activeId);
+  activeIdRef.current = activeId;
   const runCounter = useRef(0);
 
   const modelReady = Boolean(modelSettings.baseUrl.trim() && modelSettings.model.trim());
   const paletteColors = result?.palette.map((color) => color.hex) ?? [];
 
-  const applyLocalPalette = useCallback(async (image: UploadedImage) => {
+  // Every image gets an instant in-browser palette; a model result for it, if any, always wins.
+  const ensureLocalPalette = useCallback(async (image: UploadedImage) => {
+    if (resultsRef.current[image.id]) return;
     const palette = await extractPaletteFromImage(image.dataUrl, 6);
-    if (palette.length > 0) setResult(buildLocalResult(palette, ++runCounter.current));
+    if (palette.length === 0) return;
+    setResults((current) => (current[image.id] ? current : { ...current, [image.id]: buildLocalResult(palette, ++runCounter.current) }));
   }, []);
 
   const addFiles = useCallback(
@@ -128,10 +141,9 @@ export default function App() {
       setImages((current) => [...current, ...uploads]);
       setActiveImageId(uploads[0].id);
       setErrorMessage(null);
-      // A model result describes the images it was made from; only a local sample follows the active image.
-      if (!resultRef.current || resultRef.current.source === 'local') void applyLocalPalette(uploads[0]);
+      for (const upload of uploads) void ensureLocalPalette(upload);
     },
-    [applyLocalPalette, notify],
+    [ensureLocalPalette, notify],
   );
 
   // Paste images from the clipboard anywhere on the page.
@@ -184,35 +196,38 @@ export default function App() {
   const handleSelectImage = (id: string) => {
     setActiveImageId(id);
     const image = images.find((item) => item.id === id);
-    if (image && result?.source === 'local') void applyLocalPalette(image);
+    if (image) void ensureLocalPalette(image);
   };
 
   const handleRemoveImage = (id: string) => {
     const rest = images.filter((image) => image.id !== id);
     setImages(rest);
+    setResults(({ [id]: _removed, ...others }) => others);
+    setPromptEdits(({ [id]: _removed, ...others }) => others);
     if (rest.length === 0) {
       setActiveImageId(null);
-      setResult(null);
       setErrorMessage(null);
       return;
     }
-    if (activeImageId === id) {
-      setActiveImageId(rest[0].id);
-      if (result?.source === 'local') void applyLocalPalette(rest[0]);
-    }
+    if (activeId === id) setActiveImageId(rest[0].id);
   };
 
   const handleReset = () => {
     setImages([]);
     setActiveImageId(null);
-    setResult(null);
+    setResults({});
+    setPromptEdits({});
     setErrorMessage(null);
-    setTargetSubject('');
-    setStylePreference('');
+    setTargetSubject("");
+    setStylePreference("");
   };
 
   const handleSample = (hex: string) => {
-    setResult((current) => (current ? (addSampledColor(current, hex) ?? current) : current));
+    if (!activeId) return;
+    setResults((current) => {
+      const next = current[activeId] ? addSampledColor(current[activeId], hex) : null;
+      return next ? { ...current, [activeId]: next } : current;
+    });
   };
 
   // ---- model settings ------------------------------------------------------
@@ -285,43 +300,49 @@ export default function App() {
 
   // ---- AI analysis ---------------------------------------------------------
 
+  // Analyses exactly the selected image; one analysis runs at a time.
   const handleAnalyze = async () => {
-    if (images.length === 0) return;
+    const image = activeImage;
+    if (!image || analyzingId !== null) return;
 
     if (!modelReady) {
-      setSettingsError('请先填写 API 地址和模型名称；不配置模型时，仍可使用本地取色。');
+      setSettingsError("请先填写 API 地址和模型名称；不配置模型时，仍可使用本地取色。");
       setShowSettings(true);
       return;
     }
 
-    setIsAnalyzing(true);
+    setAnalyzingId(image.id);
     setErrorMessage(null);
     try {
-      const data = await analyzeColorsWithProvider(modelSettings, images, targetSubject.trim(), stylePreference);
-      setResult({ ...data, source: 'ai', runId: ++runCounter.current });
-      if (window.matchMedia('(max-width: 1023px)').matches) {
-        window.setTimeout(() => document.getElementById('insight-section')?.scrollIntoView({ behavior: 'smooth' }), 80);
+      const data = await analyzeColorsWithProvider(modelSettings, image, targetSubject.trim(), stylePreference);
+      if (!imagesRef.current.some((item) => item.id === image.id)) return; // removed while analysing
+      setResults((current) => ({ ...current, [image.id]: { ...data, source: "ai", runId: ++runCounter.current } }));
+      setPromptEdits(({ [image.id]: _replaced, ...others }) => others);
+      if (activeIdRef.current !== image.id) {
+        notify(`「${image.name}」的 AI 分析已完成，点击缩略图查看`);
+      } else if (window.matchMedia("(max-width: 1023px)").matches) {
+        window.setTimeout(() => document.getElementById("insight-section")?.scrollIntoView({ behavior: "smooth" }), 80);
       }
     } catch (error: any) {
       if (error instanceof AccessRequiredError) {
         requestAccess(handleAnalyze);
         return;
       }
-      console.warn('AI analysis failed:', error);
+      console.warn("AI analysis failed:", error);
 
-      let outcome = '已保留上一次的结果。';
-      if (!resultRef.current) {
-        const image = images.find((item) => item.id === activeImageId) ?? images[0];
-        await applyLocalPalette(image);
-        outcome = '已回退到本地色板。';
+      let outcome = "已保留上一次的结果。";
+      if (!resultsRef.current[image.id]) {
+        await ensureLocalPalette(image);
+        outcome = "已回退到本地色板。";
       }
-      const raw: string = error?.message || '';
+      const raw: string = error?.message || "";
       const readable = /failed to fetch|load failed|networkerror|network request failed/i.test(raw)
-        ? '无法连接到本站服务，请检查网络'
-        : raw || '请求异常';
-      setErrorMessage(`AI 分析失败：${readable}。${outcome}`);
+        ? "无法连接到本站服务，请检查网络"
+        : raw || "请求异常";
+      const which = imagesRef.current.length > 1 ? `（${image.name}）` : "";
+      setErrorMessage(`AI 分析失败${which}：${readable}。${outcome}`);
     } finally {
-      setIsAnalyzing(false);
+      setAnalyzingId(null);
     }
   };
 
@@ -368,13 +389,15 @@ export default function App() {
                 onAddFiles={addFiles}
                 onRemove={handleRemoveImage}
                 onSample={handleSample}
+                analyzedIds={Object.keys(results).filter((id) => results[id].source === "ai")}
+                analyzingId={analyzingId}
               />
             </div>
             <div className={`min-w-0 transition-opacity duration-500 lg:col-span-5 ${isAnalyzing ? "opacity-90" : ""}`}>
               <Insight
                 result={result}
-                imageCount={images.length}
                 isAnalyzing={isAnalyzing}
+                busyElsewhere={busyElsewhere}
                 elapsedSeconds={elapsedSeconds}
                 modelName={modelReady ? modelSettings.model : ""}
                 onAnalyze={handleAnalyze}
@@ -394,6 +417,8 @@ export default function App() {
                 onStylePreferenceChange={setStylePreference}
                 onRegenerate={handleAnalyze}
                 isAnalyzing={isAnalyzing}
+                edits={promptEdits[activeId] ?? {}}
+                onEditsChange={(next) => setPromptEdits((current) => ({ ...current, [activeId]: next }))}
               />
             </div>
           )}

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { BookOpen, Copy, RotateCcw, ShieldCheck, SlidersHorizontal, Sparkles, Wand2 } from 'lucide-react';
 import { AnalysisResult } from '../types';
 import { Button, Eyebrow, Panel, Segmented, Spinner } from './ui';
@@ -15,6 +15,9 @@ interface PromptPanelProps {
   onStylePreferenceChange: (value: string) => void;
   onRegenerate: () => void;
   isAnalyzing: boolean;
+  /** Manual edits for this image, keyed by prompt type and language. */
+  edits: Record<string, string>;
+  onEditsChange: (edits: Record<string, string>) => void;
 }
 
 const FORMATS: { value: Format; label: string; hint: string; icon: typeof Sparkles }[] = [
@@ -40,17 +43,13 @@ export function PromptPanel({
   onStylePreferenceChange,
   onRegenerate,
   isAnalyzing,
+  edits,
+  onEditsChange,
 }: PromptPanelProps) {
   const { copy } = useToast();
   const [format, setFormat] = useState<Format>('general');
   const [lang, setLang] = useState<Lang>('zh');
-  const [edits, setEdits] = useState<Record<string, string>>({});
   const areaRef = useRef<HTMLTextAreaElement>(null);
-
-  // A fresh analysis replaces the text; eyedropper additions keep manual edits.
-  useEffect(() => {
-    setEdits({});
-  }, [result.runId]);
 
   const key = `${format}_${lang}`;
   const generated = result.prompts[format][lang];
@@ -111,13 +110,11 @@ export function PromptPanel({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() =>
-                    setEdits((previous) => {
-                      const next = { ...previous };
-                      delete next[key];
-                      return next;
-                    })
-                  }
+                  onClick={() => {
+                    const next = { ...edits };
+                    delete next[key];
+                    onEditsChange(next);
+                  }}
                 >
                   <RotateCcw className="size-3.5" />
                   还原
@@ -135,7 +132,7 @@ export function PromptPanel({
             <textarea
               ref={areaRef}
               value={text}
-              onChange={(event) => setEdits((previous) => ({ ...previous, [key]: event.target.value }))}
+              onChange={(event) => onEditsChange({ ...edits, [key]: event.target.value })}
               spellCheck={false}
               aria-label={current.label}
               className="block min-h-[12.5rem] w-full flex-1 resize-none rounded-2xl border border-line bg-bg/50 p-4 text-[15px] leading-[1.75] text-fg outline-none transition focus:border-line-strong"

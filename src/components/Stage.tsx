@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pipette, Plus, X } from 'lucide-react';
+import { Loader2, Pipette, Plus, Sparkles, X } from 'lucide-react';
 import { UploadedImage } from '../types';
 import { rgbToHex } from '../utils/colorExtractor';
 import { copyText } from '../utils/clipboard';
-import { MAX_ANALYZED_IMAGES } from '../utils/openaiClient';
 import { Button, Panel } from './ui';
 import { useToast } from './toast';
 
@@ -15,6 +14,9 @@ interface StageProps {
   onAddFiles: (files: File[]) => void;
   onRemove: (id: string) => void;
   onSample: (hex: string) => void;
+  /** Images that already have a model analysis, and the one being analysed right now. */
+  analyzedIds: string[];
+  analyzingId: string | null;
 }
 
 const LOUPE_GRID = 15;
@@ -28,7 +30,7 @@ interface SampleSource {
   height: number;
 }
 
-export function Stage({ images, activeId, maxImages, onSelect, onAddFiles, onRemove, onSample }: StageProps) {
+export function Stage({ images, activeId, maxImages, onSelect, onAddFiles, onRemove, onSample, analyzedIds, analyzingId }: StageProps) {
   const { notify } = useToast();
   const active = images.find((image) => image.id === activeId) ?? images[0];
 
@@ -156,7 +158,8 @@ export function Stage({ images, activeId, maxImages, onSelect, onAddFiles, onRem
       </div>
 
       <div className="mt-auto flex items-center justify-between gap-4 px-5 py-4">
-        <div className="flex items-center gap-2 overflow-x-auto py-1.5">
+        {/* Padding (cancelled by the negative margin) leaves room for the selection ring and remove button, which overflow would otherwise clip. */}
+        <div className="-m-2 flex items-center gap-2 overflow-x-auto p-2">
           {images.map((image) => {
             const isActive = image.id === active?.id;
             return (
@@ -172,6 +175,17 @@ export function Stage({ images, activeId, maxImages, onSelect, onAddFiles, onRem
                 >
                   <img src={image.dataUrl} alt="" draggable={false} className="size-full object-cover" />
                 </button>
+                {image.id === analyzingId ? (
+                  <span className="pointer-events-none absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border border-line-strong bg-surface text-fg shadow-sm" title="AI 正在分析">
+                    <Loader2 className="size-3 animate-spin" />
+                  </span>
+                ) : (
+                  analyzedIds.includes(image.id) && (
+                    <span className="pointer-events-none absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border border-line-strong bg-surface text-fg shadow-sm" title="已有 AI 分析">
+                      <Sparkles className="size-3" />
+                    </span>
+                  )
+                )}
                 <button
                   type="button"
                   onClick={() => onRemove(image.id)}
@@ -194,9 +208,7 @@ export function Stage({ images, activeId, maxImages, onSelect, onAddFiles, onRem
             </button>
           )}
         </div>
-        {images.length > MAX_ANALYZED_IMAGES && (
-          <p className="hidden shrink-0 text-xs text-faint sm:block">AI 分析只读取前 {MAX_ANALYZED_IMAGES} 张</p>
-        )}
+        {images.length > 1 && <p className="hidden shrink-0 text-xs text-faint sm:block">AI 只分析当前选中的这张</p>}
       </div>
 
       {picking && (

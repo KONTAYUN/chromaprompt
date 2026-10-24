@@ -1,15 +1,16 @@
 import { Copy, Cpu, Settings2, Sparkles } from 'lucide-react';
 import { AnalysisResult } from '../types';
 import { getContrastTextColor } from '../utils/colorExtractor';
-import { MAX_ANALYZED_IMAGES } from '../utils/openaiClient';
 import { EXPORT_LABELS, ExportFormat, formatPalette } from '../utils/palette';
 import { Button, Eyebrow, Panel, Spinner } from './ui';
 import { useToast } from './toast';
 
 interface InsightProps {
   result: AnalysisResult | null;
-  imageCount: number;
+  /** True while the selected image is being analysed. */
   isAnalyzing: boolean;
+  /** True while a different image is being analysed (one analysis runs at a time). */
+  busyElsewhere: boolean;
   elapsedSeconds: number;
   modelName: string;
   onAnalyze: () => void;
@@ -17,7 +18,7 @@ interface InsightProps {
 }
 
 /** Summary card next to the image: palette overview, export, and the AI action. */
-export function Insight({ result, imageCount, isAnalyzing, elapsedSeconds, modelName, onAnalyze, onOpenSettings }: InsightProps) {
+export function Insight({ result, isAnalyzing, busyElsewhere, elapsedSeconds, modelName, onAnalyze, onOpenSettings }: InsightProps) {
   const { copy } = useToast();
   const palette = result?.palette ?? [];
   const title = result ? result.themeTitleZh || result.themeTitle : '尚未取到色板';
@@ -101,11 +102,16 @@ export function Insight({ result, imageCount, isAnalyzing, elapsedSeconds, model
       )}
 
       <div className="mt-auto space-y-3 border-t border-line pt-5">
-        <Button variant="primary" size="lg" className="w-full" onClick={onAnalyze} disabled={isAnalyzing}>
+        <Button variant="primary" size="lg" className="w-full" onClick={onAnalyze} disabled={isAnalyzing || busyElsewhere}>
           {isAnalyzing ? (
             <>
               <Spinner />
               模型正在观察画面… {elapsedSeconds}s
+            </>
+          ) : busyElsewhere ? (
+            <>
+              <Spinner />
+              另一张图正在分析…
             </>
           ) : (
             <>
@@ -127,7 +133,6 @@ export function Insight({ result, imageCount, isAnalyzing, elapsedSeconds, model
             {modelName ? (
               <span className="truncate">
                 模型 <span className="font-mono text-muted">{modelName}</span>
-                {imageCount > MAX_ANALYZED_IMAGES && ` · 分析前 ${MAX_ANALYZED_IMAGES} 张`}
               </span>
             ) : (
               <span>尚未配置模型，仍可使用本地取色</span>

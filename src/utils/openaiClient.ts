@@ -1,10 +1,7 @@
 import { AnalysisResult, ModelSettings, UploadedImage } from '../types';
 import { prepareImageForAnalysis } from './image';
 
-/** How many reference images are sent to the model in one analysis. */
-export const MAX_ANALYZED_IMAGES = 3;
-
-const SYSTEM_PROMPT = `You are a visual analysis and image-prompt specialist. Study the reference image(s) carefully before writing anything. Your job is faithful observation and reconstruction, not invention.
+const SYSTEM_PROMPT = `You are a visual analysis and image-prompt specialist. Study the reference image carefully before writing anything. Your job is faithful observation and reconstruction, not invention.
 
 First identify the visible subject, composition, framing, perspective, spatial relationships, scale, camera position, depth, materials, texture, lighting direction, contrast, atmosphere, and color structure. Do not infer a story or add objects that are not supported by the image.
 
@@ -190,20 +187,21 @@ async function requestChatCompletion(settings: ModelSettings, body: Record<strin
 
 export async function analyzeColorsWithProvider(
   settings: ModelSettings,
-  images: UploadedImage[],
+  image: UploadedImage,
   targetSubject: string,
   stylePreference: string,
 ): Promise<AnalysisResult> {
-  const preparedUrls = await Promise.all(images.slice(0, MAX_ANALYZED_IMAGES).map((image) => prepareImageForAnalysis(image.dataUrl)));
-  const imageParts = preparedUrls.map((url) => ({
-    type: 'image_url',
-    image_url: {
-      url,
-      detail: 'high',
+  const imageParts = [
+    {
+      type: 'image_url',
+      image_url: {
+        url: await prepareImageForAnalysis(image.dataUrl),
+        detail: 'high',
+      },
     },
-  }));
+  ];
 
-  const userPrompt = `Analyze ${imageParts.length} reference image(s) as one visual system.
+  const userPrompt = `Analyze the reference image.
 ${targetSubject ? `Optional subject direction: "${targetSubject}". Apply it only when it does not contradict the reference composition.` : 'No subject change requested. Preserve the visible subject and scene.'}
 ${stylePreference ? `Optional style direction: "${stylePreference}". Use it as a restrained adjustment, while preserving the reference structure.` : 'No additional style direction. Infer only what is visibly present.'}
 
