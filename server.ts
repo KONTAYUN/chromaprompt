@@ -1,3 +1,4 @@
+import compression from 'compression';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import dotenv from 'dotenv';
 import { rateLimit } from 'express-rate-limit';
@@ -55,6 +56,15 @@ const SESSION_TTL_MS = envInt('SESSION_TTL_HOURS', 24 * 7) * 3_600_000;
 
 app.disable('x-powered-by');
 app.set('trust proxy', parseTrustProxy(process.env.TRUST_PROXY));
+
+if (isProduction) {
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
+}
 
 class UpstreamBlockedError extends Error {
   constructor(message: string) {
@@ -649,9 +659,27 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
-    app.get('*', (_req, res) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+    const distDir = path.resolve(__dirname, 'dist');
+    // Registered after the /api routes on purpose: compression would buffer the
+    // keep-alive bytes of a long AI analysis, so only static files are compressed.
+    app.use(compression());
+    app.use(
+      express.static(distDir, {
+        setHeaders: (res, filePath) => {
+          // Vite fingerprints everything under assets/, so it can be cached forever.
+          const hashed = filePath.includes(`${path.sep}assets${path.sep}`);
+          res.setHeader('Cache-Control', hashed ? 'public, max-age=31536000, immutable' : 'no-cache');
+        },
+      }),
+    );
+    app.get('*', (req, res) => {
+      // A missing file (e.g. a stale /assets/x.js) must be a 404, not the HTML shell.
+      if (path.extname(req.path)) {
+        res.status(404).type('text/plain').send('Not found');
+        return;
+      }
+      res.setHeader('Cache-Control', 'no-cache');
+      res.sendFile(path.resolve(distDir, 'index.html'));
     });
   }
 

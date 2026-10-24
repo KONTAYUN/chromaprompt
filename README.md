@@ -1,10 +1,10 @@
 # ChromaPrompt - 参考图 HEX 色彩解构与反推提示词工作台
 
-根据一张或者多张参考图精准分析画面色彩空间，提取核心 HEX 色标、面积分布与色彩调和关系，并反推严格保持色彩一致性的 AI 图像生成提示词，支持中英文双语一键切换。默认使用浏览器本地 Canvas 提取色彩；用户可选填自己的 OpenAI 兼容模型进行 AI 深度分析。
+根据参考图精准分析画面色彩空间，提取核心 HEX 色标、面积分布与色彩调和关系，并反推严格保持色彩一致性的 AI 图像生成提示词，支持中英文双语一键切换。默认使用浏览器本地 Canvas 提取色彩；用户可选填自己的 OpenAI 兼容模型进行 AI 深度分析。
 
 ## ✨ 核心特性
 
-- **多图参考解析**：支持单张或多张参考图同时输入，智能提取画面主色调、辅色调、高光点缀色与环境阴影色。
+- **多图管理**：一次可放入多张参考图，点击缩略图切换；本地取色即时可用，AI 深度分析只针对当前选中的那张，各张图的分析结果会在本次页面内分别保留，刷新即清空。
 - **三类提示词**：通用还原、视觉描述、色彩约束，均不绑定具体模型或版本。
 - **中英文双语一键切换**：一键切换生成的提示词语言（中文/英文），方便国内与国际 AI 工具使用。
 - **画板实时吸色器**：支持在参考图画布上实时鼠标悬停、放大采样任意像素并一键复制 HEX 代码。
@@ -53,6 +53,24 @@ docker run -d --name chromaprompt --restart unless-stopped \
   -e TRUST_PROXY=1 \
   chromaprompt
 ```
+**直接使用 GitHub 自动构建的镜像**
+
+仓库里的 `.github/workflows/docker.yml` 会在代码推送后自动构建 `linux/amd64` 和 `linux/arm64` 两种架构的镜像，发布到 GitHub Container Registry：
+
+| 触发方式 | 得到的镜像标签 |
+| --- | --- |
+| 推送到 `main` 分支 | `latest`、`sha-xxxxxxx` |
+| 推送版本标签（如 `git tag v1.0.0 && git push origin v1.0.0`） | `1.0.0`、`1.0` |
+| 提交 Pull Request | 只验证能构建，不发布 |
+
+在云服务器上直接拉取运行（把 `kontayun` 换成你的 GitHub 用户名或组织名，全部小写）：
+
+```bash
+docker run -d --name chromaprompt --restart unless-stopped   -p 127.0.0.1:3000:3000   -e ACCESS_CODE="换成你自己的口令"   -e TRUST_PROXY=1   ghcr.io/kontayun/chromaprompt:latest
+```
+
+首次发布后，镜像默认是**私有**的。要让服务器免登录拉取：在 GitHub 网页进入 Packages → chromaprompt → Package settings → Change visibility 改为 Public；或者保持私有，在服务器上先 `docker login ghcr.io`（用户名填 GitHub 用户名，密码填勾选了 `read:packages` 的个人访问令牌）。
+
 镜像为多阶段构建：运行时只包含 `server.js`、`dist/` 和生产依赖，以非 root 用户（`node`）运行，带 `HEALTHCHECK`（`/healthz`），收到 `SIGTERM` 会优雅退出。
 
 本站服务器提供页面和静态资源；模型列表直连失败时自动通过 `/api/models` 转发，AI 图片分析统一通过 `/api/chat/completions` 转发。请求只在内存中处理，不保存图片或 API Key。

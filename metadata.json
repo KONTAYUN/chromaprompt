@@ -1,6 +1,0 @@
-{
-  "name": "ChromaPrompt — Color Reference Workspace",
-  "description": "Extract a reusable HEX palette locally from reference images, with optional browser-direct OpenAI-compatible prompt analysis.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_CLIENT_SIDE_OPENAI_COMPATIBLE_API"]
-}
