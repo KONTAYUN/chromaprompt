@@ -7,7 +7,6 @@ interface HeaderProps {
   theme: Theme;
   onToggleTheme: () => void;
   onOpenSettings: () => void;
-  modelReady: boolean;
   hasImages: boolean;
   onReset: () => void;
 }
@@ -30,10 +29,10 @@ function Mark({ colors }: { colors: string[] }) {
   );
 }
 
-export function Header({ colors, theme, onToggleTheme, onOpenSettings, modelReady, hasImages, onReset }: HeaderProps) {
+export function Header({ colors, theme, onToggleTheme, onOpenSettings, hasImages, onReset }: HeaderProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-bg/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-4 px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-[1360px] items-center justify-between gap-4 px-4 sm:px-6">
         <a href="/" className="flex items-center gap-2.5" aria-label="ChromaPrompt 首页">
           <Mark colors={colors} />
           <span className="text-[17px] font-semibold tracking-tight">
@@ -51,14 +50,7 @@ export function Header({ colors, theme, onToggleTheme, onOpenSettings, modelRead
             </span>
           )}
           <Button variant="secondary" size="sm" onClick={onOpenSettings} aria-label="模型设置">
-            <span className="relative flex items-center">
-              <Settings2 className="size-3.5" />
-              <span
-                className={`absolute -right-1 -top-1 size-1.5 rounded-full ring-2 ring-surface ${
-                  modelReady ? 'bg-emerald-500' : 'bg-faint'
-                }`}
-              />
-            </span>
+            <Settings2 className="size-3.5" />
             <span className="hidden sm:inline">模型设置</span>
           </Button>
           <IconButton onClick={onToggleTheme} aria-label={theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'}>

@@ -16,12 +16,12 @@ import { AccessCodeModal } from './components/AccessCodeModal';
 import { Backdrop } from './components/Backdrop';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
+import { Insight } from './components/Insight';
 import { PalettePanel } from './components/PalettePanel';
 import { PromptPanel } from './components/PromptPanel';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { Stage } from './components/Stage';
 import { useToast } from './components/toast';
-import { Panel } from './components/ui';
 
 const MODEL_SETTINGS_STORAGE_KEY = 'chromaprompt:model-settings:v1';
 const MAX_IMAGES = 6;
@@ -300,7 +300,7 @@ export default function App() {
       const data = await analyzeColorsWithProvider(modelSettings, images, targetSubject.trim(), stylePreference);
       setResult({ ...data, source: 'ai', runId: ++runCounter.current });
       if (window.matchMedia('(max-width: 1023px)').matches) {
-        window.setTimeout(() => document.getElementById('palette-section')?.scrollIntoView({ behavior: 'smooth' }), 80);
+        window.setTimeout(() => document.getElementById('insight-section')?.scrollIntoView({ behavior: 'smooth' }), 80);
       }
     } catch (error: any) {
       if (error instanceof AccessRequiredError) {
@@ -340,7 +340,6 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         onOpenSettings={openSettings}
-        modelReady={modelReady}
         hasImages={hasImages}
         onReset={handleReset}
       />
@@ -348,74 +347,61 @@ export default function App() {
       {!hasImages ? (
         <Hero onFiles={addFiles} maxImages={MAX_IMAGES} dragging={fileDragging} />
       ) : (
-        <main className="mx-auto grid max-w-[1280px] gap-8 px-4 pb-24 pt-8 sm:px-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-10">
-          <div className="lg:sticky lg:top-24 lg:self-start">
-            <Stage
-              images={images}
-              activeId={activeImageId}
-              maxImages={MAX_IMAGES}
-              onSelect={handleSelectImage}
-              onAddFiles={addFiles}
-              onRemove={handleRemoveImage}
-              onSample={handleSample}
-              onAnalyze={handleAnalyze}
-              onOpenSettings={openSettings}
-              isAnalyzing={isAnalyzing}
-              elapsedSeconds={elapsedSeconds}
-              modelName={modelReady ? modelSettings.model : ''}
-            />
+        <main className="mx-auto max-w-[1360px] space-y-12 px-4 pb-24 pt-8 sm:px-6" aria-busy={isAnalyzing}>
+          {errorMessage && (
+            <div role="alert" className="animate-pop-in flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3.5 text-sm text-amber-700 dark:text-amber-200">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <p className="flex-1 leading-relaxed">{errorMessage}</p>
+              <button type="button" onClick={() => setErrorMessage(null)} aria-label="关闭提示" className="opacity-60 transition hover:opacity-100">
+                <X className="size-4" />
+              </button>
+            </div>
+          )}
+
+          <div className="grid items-stretch gap-6 lg:grid-cols-12">
+            <div className="min-w-0 lg:col-span-7">
+              <Stage
+                images={images}
+                activeId={activeImageId}
+                maxImages={MAX_IMAGES}
+                onSelect={handleSelectImage}
+                onAddFiles={addFiles}
+                onRemove={handleRemoveImage}
+                onSample={handleSample}
+              />
+            </div>
+            <div className={`min-w-0 transition-opacity duration-500 lg:col-span-5 ${isAnalyzing ? "opacity-90" : ""}`}>
+              <Insight
+                result={result}
+                imageCount={images.length}
+                isAnalyzing={isAnalyzing}
+                elapsedSeconds={elapsedSeconds}
+                modelName={modelReady ? modelSettings.model : ""}
+                onAnalyze={handleAnalyze}
+                onOpenSettings={openSettings}
+              />
+            </div>
           </div>
 
-          <div className="min-w-0 space-y-14" aria-busy={isAnalyzing}>
-            {isAnalyzing && (
-              <div role="status" className="animate-fade-in space-y-2.5">
-                <div className="relative h-0.5 overflow-hidden rounded-full bg-line">
-                  <div className="animate-indeterminate absolute inset-y-0 w-1/3 rounded-full bg-accent" />
-                </div>
-                <p className="text-xs text-muted">模型正在观察画面并整理色板。推理类模型可能需要 1–3 分钟，请保持页面打开。</p>
-              </div>
-            )}
-
-            {errorMessage && (
-              <div role="alert" className="animate-pop-in flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3.5 text-sm text-amber-700 dark:text-amber-200">
-                <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                <p className="flex-1 leading-relaxed">{errorMessage}</p>
-                <button type="button" onClick={() => setErrorMessage(null)} aria-label="关闭提示" className="opacity-60 transition hover:opacity-100">
-                  <X className="size-4" />
-                </button>
-              </div>
-            )}
-
-            {result ? (
-              <>
-                <div className={`transition-opacity duration-500 ${isAnalyzing ? 'pointer-events-none opacity-45' : ''}`}>
-                  <PalettePanel result={result} />
-                </div>
-                <div className={`transition-opacity duration-500 ${isAnalyzing ? 'pointer-events-none opacity-45' : ''}`}>
-                  <PromptPanel
-                    result={result}
-                    targetSubject={targetSubject}
-                    onTargetSubjectChange={setTargetSubject}
-                    stylePreference={stylePreference}
-                    onStylePreferenceChange={setStylePreference}
-                    onRegenerate={handleAnalyze}
-                    isAnalyzing={isAnalyzing}
-                  />
-                </div>
-              </>
-            ) : (
-              !isAnalyzing && (
-                <Panel className="px-6 py-10 text-center text-sm text-muted">
-                  没能从这张图里取到颜色。可以换一张图，或点击“AI 深度分析”。
-                </Panel>
-              )
-            )}
-          </div>
+          {result && (
+            <div className={`space-y-12 transition-opacity duration-500 ${isAnalyzing ? "pointer-events-none opacity-45" : ""}`}>
+              <PalettePanel result={result} />
+              <PromptPanel
+                result={result}
+                targetSubject={targetSubject}
+                onTargetSubjectChange={setTargetSubject}
+                stylePreference={stylePreference}
+                onStylePreferenceChange={setStylePreference}
+                onRegenerate={handleAnalyze}
+                isAnalyzing={isAnalyzing}
+              />
+            </div>
+          )}
         </main>
       )}
 
       <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-[1280px] flex-col gap-2 px-4 py-6 text-xs text-faint sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="mx-auto flex max-w-[1360px] flex-col gap-2 px-4 py-6 text-xs text-faint sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <span>
             Chroma<span className="font-serif italic">Prompt</span> · 色彩参考工作台
           </span>

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { BookOpen, Copy, RotateCcw, ShieldCheck, Sparkles, Wand2 } from 'lucide-react';
+import { BookOpen, Copy, RotateCcw, ShieldCheck, SlidersHorizontal, Sparkles, Wand2 } from 'lucide-react';
 import { AnalysisResult } from '../types';
 import { Button, Eyebrow, Panel, Segmented, Spinner } from './ui';
 import { useToast } from './toast';
@@ -45,7 +45,6 @@ export function PromptPanel({
   const [format, setFormat] = useState<Format>('general');
   const [lang, setLang] = useState<Lang>('zh');
   const [edits, setEdits] = useState<Record<string, string>>({});
-  const [tuneOpen, setTuneOpen] = useState(false);
   const areaRef = useRef<HTMLTextAreaElement>(null);
 
   // A fresh analysis replaces the text; eyedropper additions keep manual edits.
@@ -64,7 +63,7 @@ export function PromptPanel({
     const area = areaRef.current;
     if (!area) return;
     area.style.height = 'auto';
-    area.style.height = `${Math.max(area.scrollHeight, 160)}px`;
+    area.style.height = `${Math.max(area.scrollHeight, 200)}px`;
   }, [text, format, lang]);
 
   return (
@@ -75,7 +74,7 @@ export function PromptPanel({
             <Wand2 className="size-3.5" />
             提示词
           </Eyebrow>
-          <h2 id="prompt-title" className="mt-3 text-3xl font-semibold tracking-tight">
+          <h2 id="prompt-title" className="mt-3 text-2xl font-semibold tracking-tight">
             带着这套配色去创作
           </h2>
         </div>
@@ -90,111 +89,95 @@ export function PromptPanel({
         />
       </div>
 
-      <Panel className="overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
-          <Segmented
-            label="提示词类型"
-            value={format}
-            onChange={setFormat}
-            options={FORMATS.map((item) => ({
-              value: item.value,
-              label: (
-                <>
-                  <item.icon className="size-3.5" />
-                  {item.label}
-                </>
-              ),
-            }))}
-          />
-          <div className="flex items-center gap-1.5">
-            {isEdited && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  setEdits((previous) => {
-                    const next = { ...previous };
-                    delete next[key];
-                    return next;
-                  })
-                }
-              >
-                <RotateCcw className="size-3.5" />
-                还原
-              </Button>
-            )}
-            <Button variant="primary" size="sm" onClick={() => copy(text, '提示词已复制')}>
-              <Copy className="size-3.5" />
-              复制
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-3 p-5">
-          <p className="text-xs text-faint">{current.hint}，可直接编辑后再复制。</p>
-          <textarea
-            ref={areaRef}
-            value={text}
-            onChange={(event) => setEdits((previous) => ({ ...previous, [key]: event.target.value }))}
-            spellCheck={false}
-            aria-label={current.label}
-            className="block min-h-40 w-full resize-none rounded-2xl border border-line bg-bg/50 p-4 text-[15px] leading-[1.75] text-fg outline-none transition focus:border-line-strong"
-          />
-          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-faint">
-            <div className="flex flex-wrap items-center gap-1.5">
-              {result.palette.map((color, index) => (
-                <span
-                  key={`${color.hex}-${index}`}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-line py-0.5 pl-1 pr-2 font-mono text-[11px] text-muted"
+      <div className="grid gap-5 lg:grid-cols-12">
+        <Panel className="flex flex-col overflow-hidden lg:col-span-8">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
+            <Segmented
+              label="提示词类型"
+              value={format}
+              onChange={setFormat}
+              options={FORMATS.map((item) => ({
+                value: item.value,
+                label: (
+                  <>
+                    <item.icon className="size-3.5" />
+                    {item.label}
+                  </>
+                ),
+              }))}
+            />
+            <div className="flex items-center gap-1.5">
+              {isEdited && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setEdits((previous) => {
+                      const next = { ...previous };
+                      delete next[key];
+                      return next;
+                    })
+                  }
                 >
-                  <span className="size-3 rounded-full border border-line-strong" style={{ backgroundColor: color.hex }} />
-                  {color.hex}
-                </span>
-              ))}
+                  <RotateCcw className="size-3.5" />
+                  还原
+                </Button>
+              )}
+              <Button variant="primary" size="sm" onClick={() => copy(text, '提示词已复制')}>
+                <Copy className="size-3.5" />
+                复制
+              </Button>
             </div>
-            <span className="font-mono">{text.length} 字符</span>
           </div>
-        </div>
 
-        {result.lightingAtmosphere && (
-          <div className="border-t border-line bg-surface-2/40 px-5 py-4 text-sm leading-relaxed">
-            <span className="mr-2 font-medium">{lang === 'zh' ? '光影' : 'Lighting'}</span>
-            <span className="text-muted">{result.lightingAtmosphere[lang]}</span>
+          <div className="flex flex-1 flex-col gap-3 p-5">
+            <p className="text-xs text-faint">{current.hint}，可直接编辑后再复制。</p>
+            <textarea
+              ref={areaRef}
+              value={text}
+              onChange={(event) => setEdits((previous) => ({ ...previous, [key]: event.target.value }))}
+              spellCheck={false}
+              aria-label={current.label}
+              className="block min-h-[12.5rem] w-full flex-1 resize-none rounded-2xl border border-line bg-bg/50 p-4 text-[15px] leading-[1.75] text-fg outline-none transition focus:border-line-strong"
+            />
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-faint">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {result.palette.map((color, index) => (
+                  <span
+                    key={`${color.hex}-${index}`}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-line py-0.5 pl-1 pr-2 font-mono text-[11px] text-muted"
+                  >
+                    <span className="size-3 rounded-full border border-line-strong" style={{ backgroundColor: color.hex }} />
+                    {color.hex}
+                  </span>
+                ))}
+              </div>
+              <span className="font-mono">{text.length} 字符</span>
+            </div>
           </div>
-        )}
-      </Panel>
+        </Panel>
 
-      <Panel>
-        <button
-          type="button"
-          onClick={() => setTuneOpen((open) => !open)}
-          aria-expanded={tuneOpen}
-          className="flex w-full items-center justify-between px-5 py-4 text-left"
-        >
-          <span>
-            <span className="block text-sm font-medium">微调后重新生成</span>
-            <span className="mt-0.5 block text-xs text-muted">指定主题或风格，让模型在保留色彩的前提下改写提示词</span>
-          </span>
-          <span className={`text-faint transition ${tuneOpen ? 'rotate-45' : ''}`} aria-hidden>
-            ＋
-          </span>
-        </button>
+        <div className="flex flex-col gap-5 lg:col-span-4">
+          <Panel className="space-y-4 p-5">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <SlidersHorizontal className="size-4 text-muted" />
+              微调后重新生成
+            </div>
+            <p className="-mt-2 text-xs leading-relaxed text-muted">指定主题或风格，让模型在保留色彩的前提下改写提示词。</p>
 
-        {tuneOpen && (
-          <div className="animate-fade-in space-y-4 border-t border-line px-5 pb-5 pt-4">
             <label className="block space-y-1.5">
               <span className="text-xs font-medium text-muted">主题（可选）</span>
               <input
                 value={targetSubject}
                 onChange={(event) => onTargetSubjectChange(event.target.value)}
-                placeholder="例如：一只在雨夜街头的黑猫"
+                placeholder="例如：雨夜街头的黑猫"
                 className="h-10 w-full rounded-xl border border-line bg-bg/50 px-3.5 text-sm outline-none transition placeholder:text-faint focus:border-line-strong"
               />
             </label>
 
             <div className="space-y-2">
               <span className="text-xs font-medium text-muted">风格</span>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {STYLE_PRESETS.map((preset) => {
                   const active = stylePreference === preset.value;
                   return (
@@ -203,7 +186,7 @@ export function PromptPanel({
                       type="button"
                       aria-pressed={active}
                       onClick={() => onStylePreferenceChange(preset.value)}
-                      className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition ${
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                         active ? 'border-fg bg-fg text-bg' : 'border-line text-muted hover:border-line-strong hover:text-fg'
                       }`}
                     >
@@ -214,13 +197,20 @@ export function PromptPanel({
               </div>
             </div>
 
-            <Button variant="primary" onClick={onRegenerate} disabled={isAnalyzing}>
+            <Button variant="primary" className="w-full" onClick={onRegenerate} disabled={isAnalyzing}>
               {isAnalyzing ? <Spinner /> : <Sparkles className="size-4" />}
               {isAnalyzing ? '生成中…' : '重新生成'}
             </Button>
-          </div>
-        )}
-      </Panel>
+          </Panel>
+
+          {result.lightingAtmosphere && (
+            <Panel className="p-5">
+              <p className="text-sm font-medium">{lang === 'zh' ? '光影' : 'Lighting'}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{result.lightingAtmosphere[lang]}</p>
+            </Panel>
+          )}
+        </div>
+      </div>
     </section>
   );
 }

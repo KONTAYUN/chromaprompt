@@ -1,13 +1,8 @@
-import { Copy, Cpu, Sparkles } from 'lucide-react';
+import { Copy } from 'lucide-react';
 import { AnalysisResult } from '../types';
 import { getContrastTextColor, hexToHsl, hexToRgb } from '../utils/colorExtractor';
-import { EXPORT_LABELS, ExportFormat, formatPalette } from '../utils/palette';
-import { Button, Eyebrow, Panel } from './ui';
+import { Eyebrow } from './ui';
 import { useToast } from './toast';
-
-interface PalettePanelProps {
-  result: AnalysisResult;
-}
 
 // Stable per colour (so adding a sample does not replay every card's entrance); the index only disambiguates duplicates.
 function colorKey(palette: AnalysisResult['palette'], index: number): string {
@@ -15,77 +10,21 @@ function colorKey(palette: AnalysisResult['palette'], index: number): string {
   return palette.findIndex((c) => c.hex === hex) === index ? hex : `${hex}-${index}`;
 }
 
-export function PalettePanel({ result }: PalettePanelProps) {
+/** Every colour as a swatch card; click a card to copy its HEX. */
+export function PalettePanel({ result }: { result: AnalysisResult }) {
   const { copy } = useToast();
   const { palette } = result;
-  const title = result.themeTitleZh || result.themeTitle;
-  const meta = [
-    { label: '色彩关系', value: result.colorHarmonyZh || result.colorHarmony },
-    { label: '冷暖倾向', value: result.temperature },
-    { label: '反差与饱和', value: result.saturationMood },
-  ].filter((item) => item.value);
 
   return (
     <section id="palette-section" aria-labelledby="palette-title" className="scroll-mt-24 space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <Eyebrow>
-            {result.source === 'ai' ? <Sparkles className="size-3.5" /> : <Cpu className="size-3.5" />}
-            {result.source === 'ai' ? 'AI 分析' : '本地取色'} · 色板
-          </Eyebrow>
-          <h2 id="palette-title" className="mt-3 text-3xl font-semibold tracking-tight">
-            {title}
-          </h2>
-          {result.themeTitle && result.themeTitleZh && <p className="mt-1 font-serif text-base italic text-muted">{result.themeTitle}</p>}
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <span className="mr-1 text-xs text-faint">复制为</span>
-          {(Object.keys(EXPORT_LABELS) as ExportFormat[]).map((format) => (
-            <Button
-              key={format}
-              size="sm"
-              onClick={() => copy(formatPalette(palette, format), `已复制 ${EXPORT_LABELS[format]} 色板`)}
-            >
-              <Copy className="size-3" />
-              {EXPORT_LABELS[format]}
-            </Button>
-          ))}
-        </div>
+      <div>
+        <Eyebrow>全部颜色 · {palette.length} 种</Eyebrow>
+        <h2 id="palette-title" className="mt-3 text-2xl font-semibold tracking-tight">
+          色板明细
+        </h2>
       </div>
 
-      {meta.length > 0 && (
-        <dl className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
-          {meta.map((item) => (
-            <div key={item.label} className="bg-surface px-4 py-3.5">
-              <dt className="text-[11px] uppercase tracking-wider text-faint">{item.label}</dt>
-              <dd className="mt-1.5 text-sm leading-snug">{item.value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
-      <Panel className="p-2">
-        <div className="flex h-16 gap-[3px] overflow-hidden rounded-[1.15rem]" role="img" aria-label="色彩面积占比">
-          {palette.map((color, index) => {
-            const ink = getContrastTextColor(color.hex);
-            return (
-              <button
-                key={colorKey(palette, index)}
-                type="button"
-                onClick={() => copy(color.hex, `已复制 ${color.hex}`, color.hex)}
-                title={`${color.hex} · ${color.percentage}%`}
-                className="relative flex min-w-0 items-end px-2.5 pb-2 transition-[filter] hover:brightness-110"
-                style={{ flex: `${Math.max(color.percentage, 3)} 1 0%`, backgroundColor: color.hex, color: ink }}
-              >
-                {color.percentage >= 8 && <span className="font-mono text-[11px] font-medium opacity-80">{color.percentage}%</span>}
-              </button>
-            );
-          })}
-        </div>
-      </Panel>
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {palette.map((color, index) => {
           const ink = getContrastTextColor(color.hex);
           const rgb = color.rgb || hexToRgb(color.hex);
@@ -99,7 +38,7 @@ export function PalettePanel({ result }: PalettePanelProps) {
                 type="button"
                 onClick={() => copy(color.hex, `已复制 ${color.hex}`, color.hex)}
                 aria-label={`复制 ${color.hex}`}
-                className="relative flex aspect-[5/4] w-full flex-col justify-between p-3 text-left"
+                className="relative flex aspect-[3/2] w-full flex-col justify-between p-3 text-left"
                 style={{ backgroundColor: color.hex, color: ink }}
               >
                 <span

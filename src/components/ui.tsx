@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 
 type Variant = 'primary' | 'secondary' | 'ghost';
@@ -92,6 +92,10 @@ export function Spinner({ className = 'size-4' }: { className?: string }) {
   return <Loader2 className={`animate-spin ${className}`} aria-hidden />;
 }
 
-export function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-3xl border border-line bg-surface shadow-card ${className}`}>{children}</div>;
+export function Panel({ children, className = '', ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div {...props} className={`rounded-3xl border border-line bg-surface shadow-card ${className}`}>
+      {children}
+    </div>
+  );
 }

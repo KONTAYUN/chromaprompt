@@ -53,7 +53,7 @@ export function Hero({ onFiles, maxImages, dragging }: HeroProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <section className="mx-auto max-w-[1280px] px-4 pb-20 pt-10 sm:px-6 lg:pt-20">
+    <section className="mx-auto max-w-[1360px] px-4 pb-20 pt-10 sm:px-6 lg:pt-20">
       <div className="grid items-center gap-12 lg:grid-cols-[1.08fr_0.92fr]">
         <div className="animate-fade-up">
           <Eyebrow>

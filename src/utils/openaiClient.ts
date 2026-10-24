@@ -14,8 +14,8 @@ Return only one valid JSON object with this shape:
   "themeTitleZh": "中文色彩主题名",
   "colorHarmony": "English harmony description",
   "colorHarmonyZh": "中文调和关系",
-  "temperature": "temperature description",
-  "saturationMood": "saturation and contrast description",
+  "temperature": "冷暖倾向，用中文简述",
+  "saturationMood": "饱和度与反差，用中文简述",
   "palette": [{
     "hex": "#RRGGBB",
     "nameEn": "short descriptive English color name",
