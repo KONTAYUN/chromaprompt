@@ -68,6 +68,34 @@ async function readJsonResponse(response: Response): Promise<any> {
   }
 }
 
+/** Thrown when the site relay needs an access code the visitor has not entered yet. */
+export class AccessRequiredError extends Error {
+  constructor() {
+    super('需要访问口令。');
+    this.name = 'AccessRequiredError';
+  }
+}
+
+async function relayFetch(input: string, init?: RequestInit): Promise<Response> {
+  const response = await fetch(input, init);
+  if (response.status === 401) {
+    const payload = await response.clone().json().catch(() => null);
+    if (payload?.code === 'AUTH_REQUIRED') throw new AccessRequiredError();
+  }
+  return response;
+}
+
+export async function submitAccessCode(code: string): Promise<void> {
+  const response = await fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  if (!response.ok) {
+    throw new Error(providerErrorMessage(await readJsonResponse(response), `验证失败（HTTP ${response.status}）。`));
+  }
+}
+
 export async function fetchProviderModels(settings: ModelSettings): Promise<string[]> {
   const baseUrl = normalizeProviderBaseUrl(settings.baseUrl);
   const response = await fetch(`${baseUrl}/models`, {
@@ -86,7 +114,7 @@ export async function fetchProviderModels(settings: ModelSettings): Promise<stri
  */
 export async function fetchProviderModelsFallback(settings: ModelSettings): Promise<string[]> {
   const baseUrl = normalizeProviderBaseUrl(settings.baseUrl);
-  const response = await fetch(`/api/models?url=${encodeURIComponent(baseUrl)}`, {
+  const response = await relayFetch(`/api/models?url=${encodeURIComponent(baseUrl)}`, {
     headers: providerHeaders(settings.apiKey),
   });
   return parseProviderModelsResponse(response);
@@ -142,13 +170,15 @@ async function requestChatCompletion(settings: ModelSettings, body: Record<strin
   const baseUrl = normalizeProviderBaseUrl(settings.baseUrl);
   // Image analysis always uses the same-origin relay. This avoids a browser
   // CORS failure followed by a duplicate provider request.
-  const response = await fetch(`/api/chat/completions?url=${encodeURIComponent(baseUrl)}`, {
+  const response = await relayFetch(`/api/chat/completions?url=${encodeURIComponent(baseUrl)}`, {
     method: 'POST',
     headers: providerHeaders(settings.apiKey),
     body: JSON.stringify(body),
   });
   const payload = await readJsonResponse(response);
-  if (!response.ok) {
+  // The relay keeps long requests alive by sending the 200 status line early,
+  // so an upstream failure can arrive as `{ "error": ... }` with an OK status.
+  if (!response.ok || payload?.error) {
     throw new Error(providerErrorMessage(payload, `模型服务返回 HTTP ${response.status}。`));
   }
   return payload;

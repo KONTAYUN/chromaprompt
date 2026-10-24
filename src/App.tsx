@@ -1,12 +1,19 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { ImageUploader } from './components/ImageUploader';
 import { PaletteDisplay } from './components/PaletteDisplay';
 import { PromptGenerator } from './components/PromptGenerator';
 import { ModelSettings } from './components/ModelSettings';
+import { AccessCodeModal } from './components/AccessCodeModal';
 import { UploadedImage, AnalysisResult, ColorItem, ModelSettings as ModelSettingsValue } from './types';
 import { extractPaletteFromImage } from './utils/colorExtractor';
-import { analyzeColorsWithProvider, fetchProviderModels, fetchProviderModelsFallback } from './utils/openaiClient';
+import {
+  AccessRequiredError,
+  analyzeColorsWithProvider,
+  fetchProviderModels,
+  fetchProviderModelsFallback,
+  submitAccessCode,
+} from './utils/openaiClient';
 import { AlertCircle } from 'lucide-react';
 
 const MODEL_SETTINGS_STORAGE_KEY = 'chromaprompt:model-settings:v1';
@@ -48,6 +55,22 @@ export default function App() {
   const [isFetchingModels, setIsFetchingModels] = useState(false);
   const [modelSettingsError, setModelSettingsError] = useState<string | null>(null);
   const [modelSettingsSaved, setModelSettingsSaved] = useState(true);
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const accessRetryRef = useRef<(() => void) | null>(null);
+
+  // The relay may require an access code; ask for it, then repeat the action that was blocked.
+  const requestAccess = (retry: () => void) => {
+    accessRetryRef.current = retry;
+    setShowAccessModal(true);
+  };
+
+  const handleSubmitAccessCode = async (code: string) => {
+    await submitAccessCode(code);
+    setShowAccessModal(false);
+    const retry = accessRetryRef.current;
+    accessRetryRef.current = null;
+    retry?.();
+  };
 
   const handleAddImages = async (files: File[]) => {
     const newUploads: UploadedImage[] = [];
@@ -156,6 +179,10 @@ export default function App() {
         setModelSettingsSaved(false);
       }
     } catch (error: any) {
+      if (error instanceof AccessRequiredError) {
+        requestAccess(handleFetchModels);
+        return;
+      }
       setModelSettingsError(error?.message || '读取模型列表失败，请检查地址和密钥。');
     } finally {
       setIsFetchingModels(false);
@@ -215,6 +242,10 @@ export default function App() {
       );
       setAnalysisResult(data);
     } catch (err: any) {
+      if (err instanceof AccessRequiredError) {
+        requestAccess(handleAnalyzeColors);
+        return;
+      }
       console.warn('AI analysis notice:', err);
       // If error occurred, provide helpful message but fallback to canvas quantization so user can still work!
       if (images.length > 0 && activeImageId) {
@@ -349,6 +380,16 @@ export default function App() {
           onFetchModels={handleFetchModels}
           onSave={handleSaveModelSettings}
           onClose={() => setShowModelSettings(false)}
+        />
+      )}
+
+      {showAccessModal && (
+        <AccessCodeModal
+          onSubmit={handleSubmitAccessCode}
+          onClose={() => {
+            accessRetryRef.current = null;
+            setShowAccessModal(false);
+          }}
         />
       )}
 
