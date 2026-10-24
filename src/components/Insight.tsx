@@ -55,17 +55,16 @@ export function Insight({ result, isAnalyzing, busyElsewhere, elapsedSeconds, mo
 
       {/* A local sample has no model commentary, so list the colours instead of leaving the card hollow. */}
       {meta.length === 0 && palette.length > 0 && (
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line">
-          {palette.slice(0, 6).map((color, index) => (
-            <li key={`${color.hex}-${index}`}>
+        <ul className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line">
+          {palette.map((color, index) => (
+            <li key={`${color.hex}-${index}`} className={`bg-surface ${palette.length % 2 === 1 && index === palette.length - 1 ? 'col-span-2' : ''}`}>
               <button
                 type="button"
                 onClick={() => copy(color.hex, `已复制 ${color.hex}`, color.hex)}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-surface-2"
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left transition hover:bg-surface-2"
               >
                 <span className="size-4 shrink-0 rounded-full border border-line-strong" style={{ backgroundColor: color.hex }} />
-                <span className="font-mono text-sm">{color.hex}</span>
-                <span className="flex-1 truncate text-xs text-muted">{color.roleLabelZh}</span>
+                <span className="flex-1 font-mono text-sm">{color.hex}</span>
                 <span className="font-mono text-xs text-faint">{color.percentage}%</span>
               </button>
             </li>

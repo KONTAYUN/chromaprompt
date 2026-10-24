@@ -95,7 +95,7 @@ function toPercentages(counts: number[]): number[] {
  * seeds, then fold every other bucket into its nearest seed so the average
  * colour and the share of the image are both representative.
  */
-export async function extractPaletteFromImage(imageSrc: string, colorCount = 6): Promise<ColorItem[]> {
+export async function extractPaletteFromImage(imageSrc: string, colorCount = 8): Promise<ColorItem[]> {
   try {
     const img = await loadImage(imageSrc);
     const canvas = document.createElement('canvas');

@@ -1,8 +1,20 @@
+import type { CSSProperties } from 'react';
 import { Copy } from 'lucide-react';
 import { AnalysisResult } from '../types';
 import { getContrastTextColor, hexToHsl, hexToRgb } from '../utils/colorExtractor';
 import { Eyebrow } from './ui';
 import { useToast } from './toast';
+
+/**
+ * Columns that split n swatches into even rows where possible (6 -> 3x2, 8 -> 4x2, 9 -> 3x3);
+ * a short last row is centred by the grid, so no count leaves a lopsided gap on one side.
+ */
+function columnsFor(count: number, wide: boolean): number {
+  if (count <= 4) return Math.max(1, count);
+  if (count === 5) return wide ? 5 : 3;
+  if (count === 6 || count === 9) return 3;
+  return 4;
+}
 
 // Stable per colour (so adding a sample does not replay every card's entrance); the index only disambiguates duplicates.
 function colorKey(palette: AnalysisResult['palette'], index: number): string {
@@ -24,7 +36,10 @@ export function PalettePanel({ result }: { result: AnalysisResult }) {
         </h2>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <div
+        className="swatch-grid"
+        style={{ '--cols-md': columnsFor(palette.length, false), '--cols-lg': columnsFor(palette.length, true) } as CSSProperties}
+      >
         {palette.map((color, index) => {
           const ink = getContrastTextColor(color.hex);
           const rgb = color.rgb || hexToRgb(color.hex);

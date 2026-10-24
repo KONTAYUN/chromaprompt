@@ -25,6 +25,8 @@ import { useToast } from './components/toast';
 
 const MODEL_SETTINGS_STORAGE_KEY = 'chromaprompt:model-settings:v1';
 const MAX_IMAGES = 6;
+/** Upper bound for the in-browser palette (the model decides its own count, 5 to 8). */
+const PALETTE_SIZE = 8;
 const DEFAULT_MODEL_SETTINGS: ModelSettings = {
   baseUrl: 'https://api.openai.com/v1',
   apiKey: '',
@@ -93,7 +95,7 @@ export default function App() {
   // Every image gets an instant in-browser palette; a model result for it, if any, always wins.
   const ensureLocalPalette = useCallback(async (image: UploadedImage) => {
     if (resultsRef.current[image.id]) return;
-    const palette = await extractPaletteFromImage(image.dataUrl, 6);
+    const palette = await extractPaletteFromImage(image.dataUrl, PALETTE_SIZE);
     if (palette.length === 0) return;
     setResults((current) => (current[image.id] ? current : { ...current, [image.id]: buildLocalResult(palette, ++runCounter.current) }));
   }, []);

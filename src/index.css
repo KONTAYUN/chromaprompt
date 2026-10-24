@@ -105,6 +105,33 @@ button:disabled {
   -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 75%);
 }
 
+/*
+ * Swatch grid: the column count per breakpoint comes from --cols-md / --cols-lg
+ * (set by the palette panel); an incomplete last row is centred.
+ */
+.swatch-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.swatch-grid > * {
+  width: calc((100% - 1rem) / 2 - 0.02px);
+}
+
+@media (min-width: 768px) {
+  .swatch-grid > * {
+    width: calc((100% - (var(--cols-md) - 1) * 1rem) / var(--cols-md) - 0.02px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .swatch-grid > * {
+    width: calc((100% - (var(--cols-lg) - 1) * 1rem) / var(--cols-lg) - 0.02px);
+  }
+}
+
 /* Transparency checkerboard behind images. */
 .bg-checker {
   background-color: var(--surface-2);
