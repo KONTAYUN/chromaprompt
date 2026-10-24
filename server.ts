@@ -363,7 +363,7 @@ const tooManyRequests = { error: '请求过于频繁，请稍后再试。' };
 
 const chatLimiter = rateLimit({
   windowMs: envInt('CHAT_RATE_WINDOW_MS', 10 * 60_000),
-  limit: envInt('CHAT_RATE_LIMIT', 20),
+  limit: envInt('CHAT_RATE_LIMIT', 60),
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: tooManyRequests,

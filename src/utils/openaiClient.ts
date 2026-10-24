@@ -1,4 +1,8 @@
 import { AnalysisResult, ModelSettings, UploadedImage } from '../types';
+import { prepareImageForAnalysis } from './image';
+
+/** How many reference images are sent to the model in one analysis. */
+export const MAX_ANALYZED_IMAGES = 3;
 
 const SYSTEM_PROMPT = `You are a visual analysis and image-prompt specialist. Study the reference image(s) carefully before writing anything. Your job is faithful observation and reconstruction, not invention.
 
@@ -190,10 +194,11 @@ export async function analyzeColorsWithProvider(
   targetSubject: string,
   stylePreference: string,
 ): Promise<AnalysisResult> {
-  const imageParts = images.slice(0, 3).map((image) => ({
+  const preparedUrls = await Promise.all(images.slice(0, MAX_ANALYZED_IMAGES).map((image) => prepareImageForAnalysis(image.dataUrl)));
+  const imageParts = preparedUrls.map((url) => ({
     type: 'image_url',
     image_url: {
-      url: image.dataUrl,
+      url,
       detail: 'high',
     },
   }));

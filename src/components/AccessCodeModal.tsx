@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Lock, X } from 'lucide-react';
+import { useEscape } from '../hooks';
+import { Button, IconButton, Spinner } from './ui';
 
 interface AccessCodeModalProps {
   onSubmit: (code: string) => Promise<void>;
   onClose: () => void;
 }
 
-export const AccessCodeModal: React.FC<AccessCodeModalProps> = ({ onSubmit, onClose }) => {
+export function AccessCodeModal({ onSubmit, onClose }: AccessCodeModalProps) {
   const [code, setCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  useEscape(onClose);
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!code.trim() || isSubmitting) return;
 
@@ -26,66 +29,54 @@ export const AccessCodeModal: React.FC<AccessCodeModalProps> = ({ onSubmit, onCl
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[55] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="access-title">
+      <div className="animate-fade-in absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <form
         onSubmit={handleSubmit}
-        className="bg-[#121620] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5"
+        className="animate-pop-in relative w-full max-w-sm space-y-5 rounded-3xl border border-line bg-surface p-6 shadow-2xl"
       >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-          aria-label="关闭访问口令"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        <IconButton onClick={onClose} aria-label="关闭" className="absolute right-4 top-4">
+          <X className="size-4" />
+        </IconButton>
 
-        <div className="flex items-start gap-3 pr-8">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shrink-0">
-            <Lock className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-white">需要访问口令</h2>
-            <p className="text-xs text-slate-500 mt-1">本站的模型转发功能已启用访问控制。</p>
-          </div>
+        <span className="flex size-11 items-center justify-center rounded-full border border-line bg-surface-2">
+          <Lock className="size-5" />
+        </span>
+        <div>
+          <h2 id="access-title" className="text-lg font-semibold tracking-tight">
+            需要访问口令
+          </h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">本站的模型转发功能已启用访问控制，请输入管理员提供的口令。</p>
         </div>
 
-        <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-slate-300">访问口令</span>
-          <input
-            type="password"
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            autoFocus
-            autoComplete="off"
-            spellCheck={false}
-            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
-          />
-        </label>
+        <input
+          type="password"
+          value={code}
+          onChange={(event) => setCode(event.target.value)}
+          autoFocus
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="访问口令"
+          aria-label="访问口令"
+          className="h-11 w-full rounded-xl border border-line bg-bg/50 px-3.5 text-sm outline-none transition placeholder:text-faint focus:border-line-strong"
+        />
 
         {errorMessage && (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-300">
+          <p role="alert" className="text-xs text-amber-600 dark:text-amber-300">
             {errorMessage}
-          </div>
+          </p>
         )}
 
-        <div className="flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-3.5 py-2 text-xs font-medium text-slate-400 hover:text-slate-200"
-          >
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>
             取消
-          </button>
-          <button
-            type="submit"
-            disabled={!code.trim() || isSubmitting}
-            className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? '验证中...' : '验证'}
-          </button>
+          </Button>
+          <Button type="submit" variant="primary" disabled={!code.trim() || isSubmitting}>
+            {isSubmitting && <Spinner />}
+            {isSubmitting ? '验证中…' : '验证'}
+          </Button>
         </div>
       </form>
     </div>
   );
-};
+}

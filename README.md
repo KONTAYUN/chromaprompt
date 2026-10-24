@@ -29,7 +29,7 @@ npm ci
 | `TRUST_PROXY` | 前面有 Nginx/Caddy/云负载均衡时设为 `1`，限流才能识别真实客户端 IP，Cookie 才会带 `Secure` |
 | `ALLOW_PRIVATE_UPSTREAM` | 默认 `false`：转发层拒绝访问内网/回环/保留地址（防 SSRF）。**仅本地测试**（例如连本机 Ollama，或本机开着 Clash/Surge 等 fake-IP 代理，公网域名会被解析成 `198.18.x.x`）时设为 `true`，并同时设置 `HOST=127.0.0.1` |
 | `UPSTREAM_ALLOWED_HOSTS` | 可选：只允许转发到这些模型服务域名（含子域名） |
-| `CHAT_RATE_LIMIT` / `MODELS_RATE_LIMIT` | 每个客户端 IP 在 10 分钟窗口内的请求上限（默认 20 / 30） |
+| `CHAT_RATE_LIMIT` / `MODELS_RATE_LIMIT` | 每个客户端 IP 在 10 分钟窗口内的请求上限（默认 60 / 30） |
 | `RELAY_MAX_CONCURRENT` / `RELAY_MAX_CONCURRENT_PER_IP` | 同时进行的转发数量上限（默认 8 / 2） |
 
 ### 3. 启动本地开发服务

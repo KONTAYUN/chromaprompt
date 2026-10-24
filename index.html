@@ -1,16 +1,32 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ChromaPrompt — Color Reference Workspace</title>
-    <meta name="description" content="Extract a reusable HEX palette locally from reference images, with optional browser-direct OpenAI-compatible prompt analysis." />
-    <meta property="og:title" content="ChromaPrompt — Color Reference Workspace" />
-    <meta property="og:description" content="Extract a reusable HEX palette locally from reference images, with optional browser-direct OpenAI-compatible prompt analysis." />
+    <title>ChromaPrompt — 参考图色彩工作台</title>
+    <meta name="description" content="从参考图中提取可复用的 HEX 色板，并生成保持色彩一致的 AI 图像提示词。取色在浏览器本地完成，可选接入你自己的 OpenAI 兼容模型做深度分析。" />
+    <meta property="og:title" content="ChromaPrompt — 参考图色彩工作台" />
+    <meta property="og:description" content="从参考图中提取可复用的 HEX 色板，并生成保持色彩一致的 AI 图像提示词。" />
     <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:card" content="summary" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%2315151a'/%3E%3Ccircle cx='11' cy='13' r='6' fill='%23ff8a5c'/%3E%3Ccircle cx='21' cy='13' r='6' fill='%237c8cff' fill-opacity='.85'/%3E%3Ccircle cx='16' cy='21' r='6' fill='%23f4d06f' fill-opacity='.85'/%3E%3C/svg%3E"
+    />
+    <script>
+      // Apply the saved (or system) theme before first paint to avoid a flash.
+      (function () {
+        var theme = 'dark';
+        try {
+          theme =
+            localStorage.getItem('chromaprompt:theme') ||
+            (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        } catch (e) {}
+        document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+      })();
+    </script>
   </head>
-  <body class="bg-[#0f1117] text-slate-100 antialiased font-sans selection:bg-indigo-500 selection:text-white">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

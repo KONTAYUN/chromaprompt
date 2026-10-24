@@ -29,6 +29,10 @@ export interface AnalysisResult {
     color: PromptSet;
   };
   lightingAtmosphere?: PromptSet;
+  /** Where the result came from: in-browser sampling or the configured model. */
+  source?: 'local' | 'ai';
+  /** Changes for every new analysis, but not when a colour is added by the eyedropper. */
+  runId?: number;
 }
 
 export interface UploadedImage {
